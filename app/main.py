@@ -366,6 +366,51 @@ def update_calculation(
     db.refresh(calculation)
     return calculation
 
+# ----------------------------------------------------------------------
+# Edit / Partially Update a Calculation (PATCH)
+# ----------------------------------------------------------------------
+@app.patch("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def patch_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Partially update a calculation. Only the provided fields will be updated.
+    """
+    # Validate UUID
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    # Fetch the calculation
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update only the fields provided
+    updated = False
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+        calculation.result = calculation.get_result()
+        updated = True
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+        calculation.result = calculation.get_result()
+        updated = True
+
+    if updated:
+        calculation.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(calculation)
+
+    return calculation
+
 
 # Delete a Calculation
 @app.delete("/calculations/{calc_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["calculations"])

@@ -1,0 +1,7 @@
+{
+    "python.analysis.autoImportCompletions": true,
+    "files.associations": {
+        "*.js": "javascript",
+        "*.ts": "typescript"
+    },
+}
